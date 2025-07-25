@@ -3,7 +3,8 @@ from prepare_train_data import create_squad_dataset_pipeline
 from prepare_vector_database import generate_chunks, create_and_save_faiss_index
 from transformers import AutoTokenizer, AutoModelForQuestionAnswering
 from transformers import TrainingArguments, Trainer
-from train import prepare_train_features
+from train import prepare_train_features, CompactLoggingCallback
+from evaluate import evaluate_model
 from datasets import load_dataset
 
 import json
@@ -12,6 +13,9 @@ import pandas as pd
 import re
 import requests
 import torch
+from datetime import datetime
+
+
 
 def download_data(data_source, dataset_path):
     # Check if the dataset already exists
@@ -131,7 +135,9 @@ def train_model(
         test_data_path,
         model_checkpoint,
         model_path,
-        training_summary_path
+        training_summary_path,
+        epochs,
+        log_dir
     ):
     # --- Step 1: Load Everything ---
     print("Loading components...")
@@ -197,31 +203,37 @@ def train_model(
         learning_rate=2e-5,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
-        num_train_epochs=3,
+        num_train_epochs=epochs,
         weight_decay=0.01,
         push_to_hub=False, # Do not push to Hugging Face Hub
         fp16=torch.cuda.is_available(),  # Use mixed precision on GPU for faster training
         dataloader_pin_memory=torch.cuda.is_available(),  # Pin memory for faster GPU transfer
         gradient_accumulation_steps=2,  # Accumulate gradients to simulate larger batch size
-        logging_steps=10,  # Log more frequently
-        save_steps=50,  # Save checkpoints more frequently
+        logging_steps=50,  # Reduced logging frequency
+        save_steps=100,  # Save checkpoints less frequently
         warmup_steps=100,  # Warmup for better training stability
+        report_to=None,  # Disable wandb/tensorboard logging
     )
 
-    # --- Step 4: Instantiate and Start the Trainer ---
+    # --- Step 4: Set Up Compact Logging ---
+    log_file_path = os.path.join(log_dir, f"training_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md")
+    logging_callback = CompactLoggingCallback(log_file_path)
+
+    # --- Step 5: Instantiate and Start the Trainer ---
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=validation_dataset,  # Use validation dataset for evaluation during training
         tokenizer=tokenizer,
+        callbacks=[logging_callback],  # Add custom logging callback
     )
 
     print("\n--- STARTING TRAINING ---")
     trainer.train()
     print("--- TRAINING COMPLETED ---")
 
-    # --- Step 5: Final Evaluation on Test Set ---
+    # --- Step 6: Final Evaluation on Test Set ---
     print("\n--- EVALUATING ON TEST SET ---")
     test_results = trainer.evaluate(eval_dataset=test_dataset)
     print("Test Results:")
@@ -231,13 +243,13 @@ def train_model(
         else:
             print(f"  {key}: {value}")
 
-    # --- Step 6: Save the Final Model ---
+    # --- Step 7: Save the Final Model ---
     
     print(f"\nSaving the final model to '{model_path}'...")
     trainer.save_model(model_path)
     print("Model saved successfully!")
     
-    # --- Step 7: Save Training Summary ---
+    # --- Step 8: Save Training Summary ---
     summary = {
         "model_checkpoint": model_checkpoint,
         "dataset_splits": {
@@ -252,16 +264,35 @@ def train_model(
             "fp16": training_args.fp16,
             "device": device
         },
-        "test_results": test_results
+        "test_results": test_results,
+        "log_file": log_file_path
     }
     
     with open(training_summary_path, 'w') as f:
         json.dump(summary, f, indent=2)
     print(f"Training summary saved to '{training_summary_path}'")
+    print(f"Training log saved to '{log_file_path}'")
 
+
+def clean_results_dir(results_dir):
+    if os.path.exists(results_dir):
+        for filename in os.listdir(results_dir):
+            file_path = os.path.join(results_dir, filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.remove(file_path)
+                elif os.path.isdir(file_path):
+                    # Remove directory and all its contents
+                    import shutil
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                print(f"Failed to delete {file_path}. Reason: {e}")
 
 if __name__ == "__main__":
     from config import *
+
+    # Clean the /results directory before starting
+    clean_results_dir(RESULTS_DIR)
 
     print("="*100, "\nDOWNLOADING DATA\n" + "="*100)
     download_data(
@@ -298,5 +329,16 @@ if __name__ == "__main__":
         test_data_path=TEST_DATA_PATH,
         model_checkpoint=MODEL_CHECKPOINT,
         model_path=MODEL_PATH,
-        training_summary_path=TRAINING_SUMMARY_PATH
+        training_summary_path=TRAINING_SUMMARY_PATH,
+        epochs=EPOCHS,
+        log_dir=RESULTS_DIR
+    )
+
+    print("="*100, "\nEVALUATING MODEL\n" + "="*100)
+    evaluate_model(
+        report_dir=REPORTS_DIR,
+        run_name=RUN,
+        model_path=MODEL_PATH,
+        embedding_model_name=EMBEDDING_MODEL_NAME,
+        max_examples=10
     )
