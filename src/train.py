@@ -1,6 +1,75 @@
-import torch
-from datasets import load_dataset
-from transformers import AutoTokenizer, AutoModelForQuestionAnswering, TrainingArguments, Trainer
+from transformers import TrainerCallback
+from datetime import datetime
+import os
+
+
+class CompactLoggingCallback(TrainerCallback):
+    """Custom callback for compact training logs."""
+    
+    def __init__(self, log_file_path):
+        self.log_file_path = log_file_path
+        self.logs = []
+        self.start_time = None
+        
+    def on_train_begin(self, args, state, control, **kwargs):
+        """Initialize logging at training start."""
+        self.start_time = datetime.now()
+        # Create header
+        header = "# Training Log\n\n"
+        header += f"**Started:** {self.start_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+        header += f"**Model:** {args.output_dir}\n\n"
+        header += "## Training Progress\n\n"
+        header += "| Epoch | Step | Train Loss | Eval Loss | Eval Runtime | Learning Rate |\n"
+        header += "|-------|------|------------|-----------|--------------|---------------|\n"
+        
+        os.makedirs(os.path.dirname(self.log_file_path), exist_ok=True)
+        with open(self.log_file_path, 'w') as f:
+            f.write(header)
+    
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        """Log training metrics at specified intervals."""
+        if logs is None:
+            return
+            
+        # Only log every few steps to reduce verbosity
+        if state.global_step % 50 == 0 or 'eval_loss' in logs:
+            log_entry = {
+                'epoch': round(state.epoch, 2),
+                'step': state.global_step,
+                'train_loss': logs.get('train_loss', ''),
+                'eval_loss': logs.get('eval_loss', ''),
+                'eval_runtime': logs.get('eval_runtime', ''),
+                'learning_rate': logs.get('learning_rate', '')
+            }
+            
+            # Format the log entry
+            if log_entry['train_loss'] or log_entry['eval_loss']:
+                line = f"| {log_entry['epoch']:.1f} | {log_entry['step']} | "
+                line += f"{log_entry['train_loss']:.4f} | " if log_entry['train_loss'] else "- | "
+                line += f"{log_entry['eval_loss']:.4f} | " if log_entry['eval_loss'] else "- | "
+                line += f"{log_entry['eval_runtime']:.1f}s | " if log_entry['eval_runtime'] else "- | "
+                line += f"{log_entry['learning_rate']:.2e} |\n" if log_entry['learning_rate'] else "- |\n"
+                
+                # Append to file
+                with open(self.log_file_path, 'a') as f:
+                    f.write(line)
+    
+    def on_train_end(self, args, state, control, **kwargs):
+        """Finalize logging at training end."""
+        end_time = datetime.now()
+        duration = end_time - self.start_time
+        
+        footer = f"\n## Training Summary\n\n"
+        footer += f"**Completed:** {end_time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+        footer += f"**Duration:** {str(duration).split('.')[0]}\n"
+        footer += f"**Total Steps:** {state.global_step}\n"
+        footer += f"**Final Epoch:** {state.epoch:.1f}\n"
+        
+        with open(self.log_file_path, 'a') as f:
+            f.write(footer)
+
+
+
 
 def prepare_train_features(examples, tokenizer):
     """
