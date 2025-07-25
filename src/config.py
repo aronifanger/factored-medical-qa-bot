@@ -1,9 +1,10 @@
 import os
 
 ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
-RUN = "run_1"
-USE_SUBSET = True
+RUN = "run_2"
+USE_SUBSET = False
 SUBSET_SIZE = 1000
+EPOCHS = 5
 
 # Check if the run directory exists
 if not os.path.exists(os.path.join(ROOT_DIR, 'data', RUN)):

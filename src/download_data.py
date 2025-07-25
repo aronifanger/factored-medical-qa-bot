@@ -33,21 +33,3 @@ def download_file_from_google_drive(file_id, destination):
         for chunk in response.iter_content(32768):
             if chunk:
                 f.write(chunk)
-
-def main():
-    file_id = get_drive_file_id(DATA_SOURCE)
-    # Tries to get the file name
-    response = requests.get(f"https://drive.google.com/uc?export=download&id={file_id}", stream=True)
-    content_disp = response.headers.get('content-disposition')
-    if content_disp:
-        fname_match = re.findall('filename=\"(.+?)\"', content_disp)
-        filename = fname_match[0] if fname_match else f"{file_id}.csv"
-    else:
-        filename = f"{file_id}.csv"
-    destination = os.path.join(DATASET_PATH)
-    print(f"Downloading to: {destination}")
-    download_file_from_google_drive(file_id, destination)
-    print("Download completed!")
-
-if __name__ == "__main__":
-    main()

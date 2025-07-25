@@ -138,37 +138,3 @@ def create_and_save_faiss_index(
     print("\nProcess completed successfully!")
     print(f"Index saved at: {index_path}")
     print(f"Metadata saved at: {metadata_path}")
-
-
-if __name__ == "__main__":
-    # Load the same tokenizer that you will use in your BERT/DistilBERT model
-    tokenizer = AutoTokenizer.from_pretrained(EMBEDDING_MODEL_NAME)
-
-    # Load the generated chunks
-    try:
-        if USE_SUBSET:
-            df_original = pd.read_csv(DATASET_PATH).sample(n=SUBSET_SIZE, random_state=42)
-        else:
-            df_original = pd.read_csv(DATASET_PATH)
-    except FileNotFoundError:
-        print(f"Error: The file '{DATASET_PATH}' was not found.")
-        print("Please run `src/download_data.py` first to download the original dataset.")
-        exit()
-
-    df_chunks = generate_chunks(df_original, tokenizer)
-
-    # The dataframe is expected to have an 'answer_chunk' column
-    # Convert it to the list of dictionaries format
-    metadata = df_chunks.to_dict(orient='records')
-
-    # Add a unique ID to each chunk for better tracking, if not present
-    for i, item in enumerate(metadata):
-        item['chunk_id'] = item.get('chunk_id', f'chunk_{i}')
-
-    # Call the main function to create and save the FAISS index
-    create_and_save_faiss_index(
-        metadata=metadata,
-        model_name=EMBEDDING_MODEL_NAME,
-        index_path=FAISS_INDEX_PATH,
-        metadata_path=METADATA_PATH
-    )
