@@ -1,0 +1,110 @@
+Log de execução será salvo em: c:\Projects\factored-medical-qa-bot\reports\run_4\main_log_20250725_133834.txt
+
+==================================================================================================== 
+DOWNLOADING DATA
+====================================================================================================
+Dataset already exists at c:\Projects\factored-medical-qa-bot\data\intern_screening_dataset.csv
+==================================================================================================== 
+PREPARING VECTOR DATABASE
+====================================================================================================
+Loading Sentence Transformer model: 'sentence-transformers/all-MiniLM-L6-v2'...
+Generating embeddings for 1246 chunks... This may take a few minutes.
+Embeddings generated in 2.81 seconds.
+Creating FAISS index with dimension 384...
+Adding vectors to the FAISS index...
+The index now contains 1246 vectors.
+Saving FAISS index to 'c:\Projects\factored-medical-qa-bot\models\run_4\faiss_index.bin'...
+Saving metadata (chunks) to 'c:\Projects\factored-medical-qa-bot\models\run_4\chunks_metadata.pkl'...
+
+Process completed successfully!
+Index saved at: c:\Projects\factored-medical-qa-bot\models\run_4\faiss_index.bin
+Metadata saved at: c:\Projects\factored-medical-qa-bot\models\run_4\chunks_metadata.pkl
+==================================================================================================== 
+PREPARING TRAINING DATA
+====================================================================================================
+Loading FAISS index, metadata, and embedding model for context augmentation...
+FAISS index with 1246 vectors, and metadata for 1246 chunks loaded.
+Generating SQuAD-style data with augmented context...
+
+--- Example of Generated Training Data ---
+{
+  "id": "1340908826653193542",
+  "title": "Medical Information",
+  "context": "susceptibility to multiple familial trichoepithelioma has an autosomal dominant pattern of inheritance, which means one copy of the altered gene in each cell increases the risk of developing this condition. however, a second, non - inherited mutation is required for development of skin appendage tumors in this disorder.\n\nis mccune albright syndrome inherited? mccune albright syndrome ( mas ) is not inherited. it is caused by a random change ( mutation ) in the gnas gene that occurs very early in development. as a result, some of the body ' s cells have a normal version of the gnas gene, while other cells have the mutated version. this phenomenon is called mosaicism. the severity of this disorder and its specific features depend on the number and location of cells that have the mutated gnas gene. this mutation is not passed on to any of the affected individual ' s children.\n\nSome types of porphyria are inherited in an autosomal dominant pattern, which means one copy of the gene in each cell is mutated. This single mutation is sufficient to reduce the activity of an enzyme needed for heme production, which increases the risk of developing signs and symptoms of porphyria. Autosomal dominant porphyrias include acute intermittent porphyria, most cases of erythropoietic protoporphyria, hereditary coproporphyria, and variegate porphyria. Although the gene mutations associated with some cases of porphyria cutanea tarda also have an autosomal dominant inheritance pattern, most people with this form of porphyria do not have an inherited gene mutation.  Other porphyrias are inherited in an autosomal recessive pattern, which means both copies of the gene in each cell have mutations. Most often, the parents of an individual with an autosomal recessive condition each carry one copy of the mutated gene, but do not show signs and symptoms of the condition. Porphyrias with an autosomal recessive pattern of inheritance include ALAD deficiency porphyria, congenital erythropoietic porphyria, and some cases of erythropoietic protoporphyria.  When erythropoietic protoporphyria is caused by mutations in the ALAS2 gene, it has an X-linked dominant pattern of inheritance. The ALAS2 gene is located on the X chromosome, which is one of the two sex chromosomes. In females (who have two X chromosomes), a mutation in one of the two copies of the gene in each cell may be sufficient to cause the disorder. In males (who have only one X chromosome), a mutation in the only copy of the gene in each cell causes the disorder. Males may experience more severe symptoms of the disorder than females. A characteristic of X-linked inheritance is that fathers cannot pass X-linked traits to their sons.  Mutations in the UROD gene are related to both porphyria cutanea tarda and hepatoerythropoietic porphyria. Individuals who inherit one altered copy of the UROD gene are at increased risk for porphyria cutanea tarda. (Multiple genetic and nongenetic factors contribute to this condition.) People who inherit two altered copies of the UROD gene in each cell develop hepatoerythropoietic porphyria.\n\nare chronic hiccups inherited? chronic hiccups are not thought to be inherited. most cases occur sporadically in people with no family history of the condition.",
+  "question": "Is porphyria inherited ?",
+  "answers": {
+    "text": [
+      "Some types of porphyria are inherited in an autosomal dominant pattern, which means one copy of the gene in each cell is mutated. This single mutation is sufficient to reduce the activity of an enzyme needed for heme production, which increases the risk of developing signs and symptoms of porphyria. Autosomal dominant porphyrias include acute intermittent porphyria, most cases of erythropoietic protoporphyria, hereditary coproporphyria, and variegate porphyria. Although the gene mutations associated with some cases of porphyria cutanea tarda also have an autosomal dominant inheritance pattern, most people with this form of porphyria do not have an inherited gene mutation.  Other porphyrias are inherited in an autosomal recessive pattern, which means both copies of the gene in each cell have mutations. Most often, the parents of an individual with an autosomal recessive condition each carry one copy of the mutated gene, but do not show signs and symptoms of the condition. Porphyrias with an autosomal recessive pattern of inheritance include ALAD deficiency porphyria, congenital erythropoietic porphyria, and some cases of erythropoietic protoporphyria.  When erythropoietic protoporphyria is caused by mutations in the ALAS2 gene, it has an X-linked dominant pattern of inheritance. The ALAS2 gene is located on the X chromosome, which is one of the two sex chromosomes. In females (who have two X chromosomes), a mutation in one of the two copies of the gene in each cell may be sufficient to cause the disorder. In males (who have only one X chromosome), a mutation in the only copy of the gene in each cell causes the disorder. Males may experience more severe symptoms of the disorder than females. A characteristic of X-linked inheritance is that fathers cannot pass X-linked traits to their sons.  Mutations in the UROD gene are related to both porphyria cutanea tarda and hepatoerythropoietic porphyria. Individuals who inherit one altered copy of the UROD gene are at increased risk for porphyria cutanea tarda. (Multiple genetic and nongenetic factors contribute to this condition.) People who inherit two altered copies of the UROD gene in each cell develop hepatoerythropoietic porphyria."
+    ],
+    "answer_start": [
+      887
+    ]
+  }
+}
+
+--- Saving Datasets ---
+Training dataset saved to 'c:\Projects\factored-medical-qa-bot\data\run_4\squad_train_data.json'
+Validation dataset saved to 'c:\Projects\factored-medical-qa-bot\data\run_4\squad_val_data.json'
+Test dataset saved to 'c:\Projects\factored-medical-qa-bot\data\run_4\squad_test_data.json'
+
+--- Summary ---
+Training examples: 700
+Validation examples: 150
+Test examples: 150
+Total examples: 1000
+==================================================================================================== 
+TRAINING MODEL
+====================================================================================================
+Loading components...
+Loading train/validation/test datasets...
+Dataset sizes:
+  Training: 700 examples
+  Validation: 150 examples
+  Test: 150 examples
+Preprocessing data for model format...
+Preprocessed dataset sizes:
+  Train: 1941 examples
+  Validation: 401 examples
+  Test: 395 examples
+Setting up training arguments...
+Using device: cuda
+GPU: NVIDIA GeForce RTX 3050 Ti Laptop GPU
+GPU Memory: 4.0 GB
+
+--- STARTING TRAINING ---
+{'loss': 2.1833, 'grad_norm': 7.747774124145508, 'learning_rate': 9.200000000000002e-06, 'epoch': 0.41}
+{'loss': 1.2891, 'grad_norm': 15.914589881896973, 'learning_rate': 1.9200000000000003e-05, 'epoch': 0.82}
+{'eval_loss': 0.8507644534111023, 'eval_runtime': 2.3708, 'eval_samples_per_second': 169.145, 'eval_steps_per_second': 21.512, 'epoch': 1.0}
+{'loss': 0.8867, 'grad_norm': 12.558187484741211, 'learning_rate': 1.6541353383458648e-05, 'epoch': 1.23}
+{'loss': 0.6397, 'grad_norm': 8.739811897277832, 'learning_rate': 1.2781954887218047e-05, 'epoch': 1.64}
+{'eval_loss': 0.5348549485206604, 'eval_runtime': 2.4224, 'eval_samples_per_second': 165.538, 'eval_steps_per_second': 21.053, 'epoch': 2.0}
+{'loss': 0.5544, 'grad_norm': 6.001659393310547, 'learning_rate': 9.022556390977444e-06, 'epoch': 2.05}
+{'loss': 0.4022, 'grad_norm': 15.519280433654785, 'learning_rate': 5.263157894736842e-06, 'epoch': 2.46}
+{'loss': 0.3249, 'grad_norm': 4.481619834899902, 'learning_rate': 1.5037593984962406e-06, 'epoch': 2.87}
+{'eval_loss': 0.5403033494949341, 'eval_runtime': 2.3421, 'eval_samples_per_second': 171.217, 'eval_steps_per_second': 21.776, 'epoch': 3.0}
+{'train_runtime': 136.2628, 'train_samples_per_second': 42.734, 'train_steps_per_second': 2.686, 'train_loss': 0.8763985034546565, 'epoch': 3.0}
+--- TRAINING COMPLETED ---
+
+--- EVALUATING ON TEST SET ---
+Test Results:
+  eval_loss: 0.5685
+  eval_runtime: 2.3556
+  eval_samples_per_second: 167.6850
+  eval_steps_per_second: 21.2260
+  epoch: 3.0000
+
+Saving the final model to 'c:\Projects\factored-medical-qa-bot\models\run_4\final_model'...
+Model saved successfully!
+Training summary saved to 'c:\Projects\factored-medical-qa-bot\models\run_4\training_summary.json'
+Training log saved to 'c:\Projects\factored-medical-qa-bot\results\run_4\training_20250725_133855.md'
+==================================================================================================== 
+EVALUATING MODEL
+====================================================================================================
+Starting evaluation for run_4
+Run description: Revising SQuAD training data generation
+Max examples per dataset: 10
+Loading components...
+Evaluating train dataset...
+Evaluating val dataset...
+Evaluating test dataset...
+Evaluation complete. Report saved to: c:\Projects\factored-medical-qa-bot\reports\run_4\evaluation_20250725_134121.md

@@ -1,0 +1,168 @@
+(factored-medical-qa-bot) PS C:\Projects\factored-medical-qa-bot> & c:/Projects/factored-medical-qa-bot/.venv/Scripts/python.exe c:/Projects/factored-medical-qa-bot/src/main.py
+==================================================================================================== 
+DOWNLOADING DATA
+====================================================================================================
+Downloading to: c:\Projects\factored-medical-qa-bot\data\run_3\intern_screening_dataset.csv
+Download completed!
+==================================================================================================== 
+PREPARING VECTOR DATABASE
+====================================================================================================
+Token indices sequence length is longer than the specified maximum sequence length for this model (574 > 512). Running this sequence through the model will result in indexing errors
+Loading Sentence Transformer model: 'sentence-transformers/all-MiniLM-L6-v2'...
+Generating embeddings for 20260 chunks... This may take a few minutes.
+Batches: 100%|████████████████████████████████████████████████████████████████████████| 634/634 [00:46<00:00, 13.64it/s]
+Embeddings generated in 48.58 seconds.
+Creating FAISS index with dimension 384...
+Adding vectors to the FAISS index...
+The index now contains 20260 vectors.
+Saving FAISS index to 'c:\Projects\factored-medical-qa-bot\models\run_3\faiss_index.bin'...
+Saving metadata (chunks) to 'c:\Projects\factored-medical-qa-bot\models\run_3\chunks_metadata.pkl'...
+
+Process completed successfully!
+Index saved at: c:\Projects\factored-medical-qa-bot\models\run_3\faiss_index.bin
+Metadata saved at: c:\Projects\factored-medical-qa-bot\models\run_3\chunks_metadata.pkl
+==================================================================================================== 
+PREPARING TRAINING DATA
+====================================================================================================
+Step 1: Aggregating answers to create long contexts...
+Step 2: Applying sentence-based chunking to long contexts...
+ 32%|████████████████████████▌                                                    | 4787/14981 [00:11<01:19, 128.64it/s]Token indices sequence length is longer than the specified maximum sequence length for this model (1152 > 512). Running this sequence through the model will result in indexing errors
+100%|████████████████████████████████████████████████████████████████████████████| 14981/14981 [00:51<00:00, 292.00it/s]
+Knowledge base created with 19147 unique chunks.
+
+Step 3: Generating training data from 16406 original rows...
+100%|█████████████████████████████████████████████████████████████████████████████| 16406/16406 [03:13<00:00, 84.65it/s] 
+
+Step 4: Splitting data into train/validation/test sets...
+
+Dataset split completed:
+  Total examples: 10782
+  Training set: 7547 examples (70.0%)
+  Validation set: 1617 examples (15.0%)
+  Test set: 1618 examples (15.0%)
+  For Scenario A (short answers), 8494 answers were found in chunks.
+
+--- Example of Generated Training Data ---
+{
+  "context": "To find the cause of diarrhea, the health care provider may\n                \n- perform a physical exam  - ask about any medicines you are taking  - test your stool or blood to look for bacteria, parasites, or other signs of disease or infection  - ask you to stop eating certain foods to see whether your diarrhea goes away\n                \nIf you have chronic diarrhea, your health care provider may perform other tests to look for signs of disease.",
+  "question": "How to diagnose What I need to know about Diarrhea ?",
+  "answers": {
+    "text": [
+      "To find the cause of diarrhea, the health care provider may\n                \n- perform a physical exam  - ask about any medicines you are taking  - test your stool or blood to look for bacteria, parasites, or other signs of disease or infection  - ask you to stop eating certain foods to see whether your diarrhea goes away\n                \nIf you have chronic diarrhea, your health care provider may perform other tests to look for signs of disease."
+    ],
+    "answer_start": [
+      0
+    ]
+  }
+}
+
+--- Saving Datasets ---
+Knowledge base chunks saved to 'c:\Projects\factored-medical-qa-bot\data\run_3\knowledge_base_chunks.csv'
+Training dataset saved to 'c:\Projects\factored-medical-qa-bot\data\run_3\squad_train_data.json'
+Validation dataset saved to 'c:\Projects\factored-medical-qa-bot\data\run_3\squad_val_data.json'
+Test dataset saved to 'c:\Projects\factored-medical-qa-bot\data\run_3\squad_test_data.json'
+
+--- Summary ---
+Knowledge base chunks: 19147
+Training examples: 7547
+Validation examples: 1617
+Test examples: 1618
+Total examples: 10782
+==================================================================================================== 
+TRAINING MODEL
+====================================================================================================
+Loading components...
+Loading train/validation/test datasets...
+Generating train split: 7547 examples [00:00, 13864.80 examples/s]
+Generating train split: 1617 examples [00:00, 13453.31 examples/s]
+Generating train split: 1618 examples [00:00, 14051.68 examples/s]
+Dataset sizes:
+  Training: 7547 examples
+  Validation: 1617 examples
+  Test: 1618 examples
+Preprocessing data for model format...
+Map: 100%|██████████████████████████████████████████████████████████████████| 7547/7547 [00:25<00:00, 301.31 examples/s]
+Map: 100%|██████████████████████████████████████████████████████████████████| 1617/1617 [00:05<00:00, 304.85 examples/s]
+Map: 100%|██████████████████████████████████████████████████████████████████| 1618/1618 [00:05<00:00, 305.91 examples/s] 
+Preprocessed dataset sizes:
+  Train: 9942 examples
+  Validation: 2153 examples
+  Test: 2101 examples
+Setting up training arguments...
+Using device: cuda
+GPU: NVIDIA GeForce RTX 3050 Ti Laptop GPU
+GPU Memory: 4.0 GB
+c:\Projects\factored-medical-qa-bot\src\main.py:223: FutureWarning: `tokenizer` is deprecated and will be removed in version 5.0.0 for `Trainer.__init__`. Use `processing_class` instead.
+  trainer = Trainer(
+
+--- STARTING TRAINING ---
+{'loss': 3.7835, 'grad_norm': 14.141021728515625, 'learning_rate': 9.200000000000002e-06, 'epoch': 0.08}
+{'loss': 0.9055, 'grad_norm': 11.702215194702148, 'learning_rate': 1.9200000000000003e-05, 'epoch': 0.16}                
+{'loss': 0.553, 'grad_norm': 5.7885355949401855, 'learning_rate': 1.9479048697621745e-05, 'epoch': 0.24}                 
+{'loss': 0.536, 'grad_norm': 7.445506572723389, 'learning_rate': 1.8912797281993207e-05, 'epoch': 0.32}                  
+{'loss': 0.475, 'grad_norm': 6.674989223480225, 'learning_rate': 1.8346545866364666e-05, 'epoch': 0.4}                   
+{'loss': 0.4447, 'grad_norm': 9.818026542663574, 'learning_rate': 1.7780294450736128e-05, 'epoch': 0.48}                 
+{'loss': 0.4865, 'grad_norm': 13.721015930175781, 'learning_rate': 1.7214043035107587e-05, 'epoch': 0.56}                
+{'loss': 0.4032, 'grad_norm': 5.696595668792725, 'learning_rate': 1.664779161947905e-05, 'epoch': 0.64}                  
+{'loss': 0.3774, 'grad_norm': 5.232005596160889, 'learning_rate': 1.608154020385051e-05, 'epoch': 0.72}                  
+{'loss': 0.3989, 'grad_norm': 4.704748630523682, 'learning_rate': 1.551528878822197e-05, 'epoch': 0.8}                   
+{'loss': 0.4272, 'grad_norm': 5.296164035797119, 'learning_rate': 1.4949037372593434e-05, 'epoch': 0.88}
+{'loss': 0.455, 'grad_norm': 30.388944625854492, 'learning_rate': 1.4382785956964893e-05, 'epoch': 0.97}                 
+{'eval_loss': 0.3785232603549957, 'eval_runtime': 17.7733, 'eval_samples_per_second': 121.137, 'eval_steps_per_second': 15.191, 'epoch': 1.0}
+{'loss': 0.4109, 'grad_norm': 14.54503059387207, 'learning_rate': 1.3816534541336355e-05, 'epoch': 1.05}                 
+{'loss': 0.398, 'grad_norm': 2.5721099376678467, 'learning_rate': 1.3250283125707815e-05, 'epoch': 1.13}
+{'loss': 0.4159, 'grad_norm': 15.996918678283691, 'learning_rate': 1.2684031710079277e-05, 'epoch': 1.21}                
+{'loss': 0.3579, 'grad_norm': 1.8624975681304932, 'learning_rate': 1.2117780294450736e-05, 'epoch': 1.29}                
+{'loss': 0.3502, 'grad_norm': 8.120888710021973, 'learning_rate': 1.1551528878822198e-05, 'epoch': 1.37}                 
+{'loss': 0.3904, 'grad_norm': 4.285275459289551, 'learning_rate': 1.098527746319366e-05, 'epoch': 1.45}                  
+{'loss': 0.3947, 'grad_norm': 11.959254264831543, 'learning_rate': 1.0419026047565119e-05, 'epoch': 1.53}                
+{'loss': 0.3872, 'grad_norm': 5.862674713134766, 'learning_rate': 9.85277463193658e-06, 'epoch': 1.61}                   
+{'loss': 0.3555, 'grad_norm': 3.2279491424560547, 'learning_rate': 9.297848244620612e-06, 'epoch': 1.69}                 
+{'loss': 0.3833, 'grad_norm': 2.3437395095825195, 'learning_rate': 8.731596828992072e-06, 'epoch': 1.77}                 
+{'loss': 0.3623, 'grad_norm': 5.841563701629639, 'learning_rate': 8.165345413363535e-06, 'epoch': 1.85}                  
+{'loss': 0.3919, 'grad_norm': 2.0032365322113037, 'learning_rate': 7.599093997734995e-06, 'epoch': 1.93}
+{'eval_loss': 0.3757342994213104, 'eval_runtime': 20.5853, 'eval_samples_per_second': 104.589, 'eval_steps_per_second': 13.116, 'epoch': 2.0}
+{'loss': 0.3655, 'grad_norm': 5.516705513000488, 'learning_rate': 7.032842582106456e-06, 'epoch': 2.01}                  
+{'loss': 0.3174, 'grad_norm': 2.518200635910034, 'learning_rate': 6.466591166477917e-06, 'epoch': 2.09}
+{'loss': 0.3498, 'grad_norm': 7.747435092926025, 'learning_rate': 5.900339750849378e-06, 'epoch': 2.17}                  
+{'loss': 0.3133, 'grad_norm': 4.070761680603027, 'learning_rate': 5.3340883352208385e-06, 'epoch': 2.25}                 
+{'loss': 0.376, 'grad_norm': 8.822325706481934, 'learning_rate': 4.767836919592299e-06, 'epoch': 2.33}                   
+{'loss': 0.3203, 'grad_norm': 6.845228672027588, 'learning_rate': 4.20158550396376e-06, 'epoch': 2.41}                   
+{'loss': 0.3473, 'grad_norm': 13.867610931396484, 'learning_rate': 3.635334088335221e-06, 'epoch': 2.49}                 
+{'loss': 0.3465, 'grad_norm': 7.295899868011475, 'learning_rate': 3.069082672706682e-06, 'epoch': 2.57}                  
+{'loss': 0.3563, 'grad_norm': 2.8891654014587402, 'learning_rate': 2.502831257078143e-06, 'epoch': 2.65}                 
+{'loss': 0.2942, 'grad_norm': 2.0028343200683594, 'learning_rate': 1.9365798414496037e-06, 'epoch': 2.73}                
+{'loss': 0.3357, 'grad_norm': 3.5539679527282715, 'learning_rate': 1.3703284258210647e-06, 'epoch': 2.81}                
+{'loss': 0.3538, 'grad_norm': 1.6083006858825684, 'learning_rate': 8.040770101925255e-07, 'epoch': 2.89}                 
+{'loss': 0.3017, 'grad_norm': 1.7657291889190674, 'learning_rate': 2.3782559456398642e-07, 'epoch': 2.98}                
+{'eval_loss': 0.3645387589931488, 'eval_runtime': 20.5692, 'eval_samples_per_second': 104.671, 'eval_steps_per_second': 13.126, 'epoch': 3.0}
+{'train_runtime': 885.4397, 'train_samples_per_second': 33.685, 'train_steps_per_second': 2.107, 'train_loss': 0.4914134696110013, 'epoch': 3.0}
+100%|███████████████████████████████████████████████████████████████████████████████| 1866/1866 [14:45<00:00,  2.11it/s] 
+--- TRAINING COMPLETED ---
+
+--- EVALUATING ON TEST SET ---
+100%|█████████████████████████████████████████████████████████████████████████████████| 263/263 [00:18<00:00, 13.98it/s]
+Test Results:
+  eval_loss: 0.3745
+  eval_runtime: 18.8984
+  eval_samples_per_second: 111.1730
+  eval_steps_per_second: 13.9160
+  epoch: 3.0000
+
+Saving the final model to 'c:\Projects\factored-medical-qa-bot\models\run_3\final_model'...
+Model saved successfully!
+Training summary saved to 'c:\Projects\factored-medical-qa-bot\models\run_3\training_summary.json'
+Training log saved to 'c:\Projects\factored-medical-qa-bot\results\run_3\training_20250725_110622.md'
+==================================================================================================== 
+EVALUATING MODEL
+====================================================================================================
+Starting evaluation for run_3
+Run description: Revising SQuAD training data generation
+Max examples per dataset: 10
+Loading components...
+Device set to use cuda:0
+Evaluating train dataset...
+You seem to be using the pipelines sequentially on GPU. In order to maximize efficiency please use a dataset
+Evaluating val dataset...
+Evaluating test dataset...
+Evaluation complete. Report saved to: c:\Projects\factored-medical-qa-bot\reports\run_3\evaluation_20250725_112140.md

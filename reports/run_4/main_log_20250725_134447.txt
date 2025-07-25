@@ -1,0 +1,27 @@
+Log de execução será salvo em: c:\Projects\factored-medical-qa-bot\reports\run_4\main_log_20250725_134447.txt
+
+==================================================================================================== 
+DOWNLOADING DATA
+====================================================================================================
+Dataset already exists at c:\Projects\factored-medical-qa-bot\data\intern_screening_dataset.csv
+==================================================================================================== 
+PREPARING VECTOR DATABASE
+====================================================================================================
+Loading Sentence Transformer model: 'sentence-transformers/all-MiniLM-L6-v2'...
+Generating embeddings for 20260 chunks... This may take a few minutes.
+Embeddings generated in 39.27 seconds.
+Creating FAISS index with dimension 384...
+Adding vectors to the FAISS index...
+The index now contains 20260 vectors.
+Saving FAISS index to 'c:\Projects\factored-medical-qa-bot\models\run_4\faiss_index.bin'...
+Saving metadata (chunks) to 'c:\Projects\factored-medical-qa-bot\models\run_4\chunks_metadata.pkl'...
+
+Process completed successfully!
+Index saved at: c:\Projects\factored-medical-qa-bot\models\run_4\faiss_index.bin
+Metadata saved at: c:\Projects\factored-medical-qa-bot\models\run_4\chunks_metadata.pkl
+==================================================================================================== 
+PREPARING TRAINING DATA
+====================================================================================================
+Loading FAISS index, metadata, and embedding model for context augmentation...
+FAISS index with 20260 vectors, and metadata for 20260 chunks loaded.
+Generating SQuAD-style data with augmented context...
