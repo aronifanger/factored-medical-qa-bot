@@ -104,7 +104,7 @@ def evaluate_dataset(
             'confidence': confidence,
             'exact_match': max_exact,
             'f1_score': max_f1,
-            'context': context[:200] + "..." if len(context) > 200 else context
+            'context': context
         })
     
     return {
@@ -333,6 +333,7 @@ def save_report(reports_dir, report_content):
 def evaluate_model(
         run_name,
         model_path,
+        run_description,
         embedding_model_name,
         faiss_index_path,
         metadata_path,
@@ -344,6 +345,7 @@ def evaluate_model(
     ):
     """Main evaluation function."""
     print(f"Starting evaluation for {run_name}")
+    print(f"Run description: {run_description}")
     print(f"Max examples per dataset: {max_examples}")
     
     # Run evaluation
@@ -379,6 +381,7 @@ if __name__ == "__main__":
     evaluate_model(
         run_name=RUN,
         model_path=MODEL_PATH,
+        run_description=RUN_DESCRIPTION,
         embedding_model_name=EMBEDDING_MODEL_NAME,
         faiss_index_path=FAISS_INDEX_PATH,
         metadata_path=METADATA_PATH,

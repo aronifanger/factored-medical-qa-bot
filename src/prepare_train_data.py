@@ -1,10 +1,24 @@
-from tqdm import tqdm   
-from transformers import AutoTokenizer
+import faiss
 import json
 import nltk
+import numpy as np
 import pandas as pd
+import pickle
+import random
+import re
 
-def chunk_text_by_sentence(text: str, tokenizer, chunk_size: int = 400, overlap_sentences: int = 1) -> list[str]:
+from collections import defaultdict
+from sentence_transformers import SentenceTransformer
+from tqdm import tqdm   
+from transformers import AutoTokenizer
+
+
+def chunk_text_by_sentence(
+        text: str,
+        tokenizer,
+        chunk_size: int = 400,
+        overlap_sentences: int = 1
+    ) -> list[str]:
     """
     Splits a text into chunks, with overlap based on whole sentences.
     This is a more robust approach to ensure text integrity.
@@ -41,99 +55,96 @@ def chunk_text_by_sentence(text: str, tokenizer, chunk_size: int = 400, overlap_
         
     return chunks
 
-def create_squad_dataset_pipeline(df_original: pd.DataFrame, tokenizer, max_answer_len_tokens: int = 512, 
-                                 train_ratio: float = 0.7, val_ratio: float = 0.15, test_ratio: float = 0.15):
+def find_answer_start(context, answer):
     """
-    Complete pipeline to create the knowledge base (chunks) and SQuAD training data.
-    Split into train/validation/test datasets.
-    
-    Args:
-        df_original: Original DataFrame with questions and answers
-        tokenizer: Tokenizer for text processing
-        max_answer_len_tokens: Maximum length for answers in tokens
-        train_ratio: Proportion for training set (default: 0.7)
-        val_ratio: Proportion for validation set (default: 0.15)
-        test_ratio: Proportion for test set (default: 0.15)
-    
-    Returns:
-        tuple: (unique_chunks, train_data, val_data, test_data)
+    Finds the starting index of an answer within a context.
+    Returns -1 if the answer is not found.
     """
-    # Validate ratios
-    if abs(train_ratio + val_ratio + test_ratio - 1.0) > 1e-6:
-        raise ValueError("train_ratio + val_ratio + test_ratio must equal 1.0")
+    match = next(re.finditer(re.escape(answer), context), None)
+    if match is None:
+        return -1
+    return match.start()
+
+def create_squad_dataset_pipeline(
+    df: pd.DataFrame, 
+    tokenizer: AutoTokenizer, 
+    train_ratio: float, 
+    val_ratio: float, 
+    test_ratio: float,
+    chunk_size: int,
+    overlap_sentences: int,
+    faiss_index_path: str,
+    metadata_path: str,
+    embedding_model_name: str
+) -> tuple[list[str], list[dict], list[dict], list[dict]]:
+    """
+    Creates SQuAD-like datasets (train, validation, test) from a DataFrame.
+    This version augments context by retrieving similar chunks from a FAISS index.
+    """
     
-    # 1. Create the knowledge base (KB) with the new chunking function
-    print("Step 1: Aggregating answers to create long contexts...")
-    df_contexts = df_original.groupby('question')['answer'].apply(lambda x: ' '.join(str(i) for i in x)).reset_index()
-    df_contexts.columns = ['topic', 'long_context']
+    # 1. Load FAISS index, metadata, and embedding model
+    print("Loading FAISS index, metadata, and embedding model for context augmentation...")
+    try:
+        faiss_index = faiss.read_index(faiss_index_path)
+        with open(metadata_path, "rb") as f:
+            metadata = pickle.load(f)
+        embedding_model = SentenceTransformer(embedding_model_name)
+        print(f"FAISS index with {faiss_index.ntotal} vectors, and metadata for {len(metadata)} chunks loaded.")
+    except Exception as e:
+        print(f"Error loading FAISS components: {e}")
+        print("Please ensure 'prepare_vector_database.py' has been run successfully.")
+        exit()
 
-    print("Step 2: Applying sentence-based chunking to long contexts...")
-    all_chunks = []
-    for context in tqdm(df_contexts['long_context']):
-        chunks = chunk_text_by_sentence(context, tokenizer, chunk_size=400, overlap_sentences=1)
-        all_chunks.extend(chunks)
-
-    unique_chunks = list(set(all_chunks))
-    print(f"Knowledge base created with {len(unique_chunks)} unique chunks.")
-
-    # 2. Create the SQuAD training dataset
-    all_training_data = []
-    print(f"\nStep 3: Generating training data from {len(df_original)} original rows...")
+    squad_data = []
     
-    # Counter for debugging
-    found_in_chunk_count = 0
+    print("Generating SQuAD-style data with augmented context...")
+    for _, row in tqdm(df.iterrows(), total=df.shape[0]):
+        if pd.isna(row['answer']):
+            continue
+        
+        question = row['question']
+        answer_text = row['answer'].strip()
+        
+        # Retrieve top_k relevant chunks from FAISS
+        question_embedding = embedding_model.encode([question], convert_to_numpy=True)
+        distances, indices = faiss_index.search(question_embedding, k=3)
+        
+        retrieved_chunks = [metadata[i]['answer_chunk'] for i in indices[0]]
+        
+        context_pieces = [chunk for chunk in retrieved_chunks if answer_text.lower() not in chunk.lower()]
+        context_pieces.append(answer_text)
+        
+        # Shuffle and join
+        random.shuffle(context_pieces)
+        context = "\n\n".join(context_pieces)
+        
+        answer_start = find_answer_start(context, answer_text)
 
-    for _, row in tqdm(df_original.iterrows(), total=df_original.shape[0]):
-        question = str(row['question'])
-        answer_text = str(row['answer'])
-        answer_tokens_len = len(tokenizer.tokenize(answer_text))
+        if answer_start != -1:
+            qa_pair = {
+                'id': str(abs(hash(context + question + answer_text))),
+                'title': "Medical Information",
+                'context': context,
+                'question': question,
+                'answers': {
+                    'text': [answer_text],
+                    'answer_start': [answer_start]
+                }
+            }
+            squad_data.append(qa_pair)
+        else:
+            raise ValueError(f"Answer start is -1 for question: {question}")
 
-        if 0 < answer_tokens_len < max_answer_len_tokens:
-            # --- SCENARIO A: Short Answer ---
-            for chunk_context in unique_chunks:
-                # The 'in' search is now much more likely to work
-                if answer_text in chunk_context:
-                    start_index = chunk_context.find(answer_text)
-                    all_training_data.append({
-                        'context': chunk_context, 'question': question,
-                        'answers': {'text': [answer_text], 'answer_start': [start_index]}
-                    })
-                    found_in_chunk_count += 1
-                    break
-        elif answer_tokens_len >= max_answer_len_tokens:
-            # --- SCENARIO B: Long Answer ---
-            long_answer_as_context = answer_text
-            answer_spans = chunk_text_by_sentence(long_answer_as_context, tokenizer, chunk_size=150, overlap_sentences=1)
-            for span in answer_spans:
-                start_index = long_answer_as_context.find(span)
-                if start_index != -1:
-                    all_training_data.append({
-                        'context': long_answer_as_context, 'question': question,
-                        'answers': {'text': [span], 'answer_start': [start_index]}
-                    })
-
-    print(f"\nStep 4: Splitting data into train/validation/test sets...")
-    
-    # Shuffle the data for random splits
-    import random
-    random.seed(42)  # For reproducibility
-    random.shuffle(all_training_data)
-    
-    # Calculate split indices
-    total_examples = len(all_training_data)
-    train_end = int(total_examples * train_ratio)
-    val_end = int(total_examples * (train_ratio + val_ratio))
+    # Shuffle the dataset before splitting
+    random.shuffle(squad_data)
     
     # Split the data
-    train_data = all_training_data[:train_end]
-    val_data = all_training_data[train_end:val_end]
-    test_data = all_training_data[val_end:]
+    total_size = len(squad_data)
+    train_end = int(total_size * train_ratio)
+    val_end = train_end + int(total_size * val_ratio)
     
-    print(f"\nDataset split completed:")
-    print(f"  Total examples: {total_examples}")
-    print(f"  Training set: {len(train_data)} examples ({len(train_data)/total_examples:.1%})")
-    print(f"  Validation set: {len(val_data)} examples ({len(val_data)/total_examples:.1%})")
-    print(f"  Test set: {len(test_data)} examples ({len(test_data)/total_examples:.1%})")
-    print(f"  For Scenario A (short answers), {found_in_chunk_count} answers were found in chunks.")
+    train_data = squad_data[:train_end]
+    val_data = squad_data[train_end:val_end]
+    test_data = squad_data[val_end:]
     
-    return unique_chunks, train_data, val_data, test_data
+    return train_data, val_data, test_data

@@ -11,10 +11,11 @@ import json
 import os
 import pandas as pd
 import re
-import requests
 import torch
 from datetime import datetime
+import sys
 
+from logger import setup_logging, close_logging
 
 
 def download_data(data_source, dataset_path):
@@ -22,22 +23,19 @@ def download_data(data_source, dataset_path):
     if os.path.exists(dataset_path):
         print(f"Dataset already exists at {dataset_path}")
         return
-    
+    print(f"Downloading to: {dataset_path}")
     file_id = get_drive_file_id(data_source)
-    # Tries to get the file name
-    response = requests.get(f"https://drive.google.com/uc?export=download&id={file_id}", stream=True)
-    content_disp = response.headers.get('content-disposition')
-    if content_disp:
-        fname_match = re.findall('filename=\"(.+?)\"', content_disp)
-        filename = fname_match[0] if fname_match else f"{file_id}.csv"
-    else:
-        filename = f"{file_id}.csv"
-    destination = os.path.join(dataset_path)
-    print(f"Downloading to: {destination}")
-    download_file_from_google_drive(file_id, destination)
+    download_file_from_google_drive(file_id, dataset_path)
     print("Download completed!")
     
-def prepare_vector_database(dataset_path, embedding_model_name, faiss_index_path, metadata_path, use_subset, subset_size):
+def prepare_vector_database(
+        dataset_path,
+        embedding_model_name,
+        faiss_index_path,
+        metadata_path,
+        use_subset,
+        subset_size
+    ):
     # Load the same tokenizer that you will use in your BERT/DistilBERT model
     tokenizer = AutoTokenizer.from_pretrained(embedding_model_name)
     # Load the generated chunks
@@ -77,7 +75,10 @@ def prepare_training_data(
         train_data_path,
         val_data_path,
         test_data_path,
-        kb_chunks_path
+        chunk_size,
+        overlap_sentences,
+        faiss_index_path,
+        metadata_path
     ):
     tokenizer = AutoTokenizer.from_pretrained(embedding_model_name)
 
@@ -88,11 +89,16 @@ def prepare_training_data(
         df_original = pd.read_csv(dataset_path)
 
     # Create the datasets with train/val/test split
-    unique_chunks, train_data, val_data, test_data = create_squad_dataset_pipeline(
+    train_data, val_data, test_data = create_squad_dataset_pipeline(
         df_original, tokenizer,
         train_ratio=0.7,    # 70% for training
         val_ratio=0.15,     # 15% for validation
-        test_ratio=0.15     # 15% for test
+        test_ratio=0.15,    # 15% for test
+        chunk_size=chunk_size,
+        overlap_sentences=overlap_sentences,
+        faiss_index_path=faiss_index_path,
+        metadata_path=metadata_path,
+        embedding_model_name=embedding_model_name
     )
 
     print("\n--- Example of Generated Training Data ---")
@@ -102,11 +108,6 @@ def prepare_training_data(
     # Save all three datasets
     print(f"\n--- Saving Datasets ---")
     
-    # Save the unified knowledge base chunks
-    df_chunks = pd.DataFrame(unique_chunks, columns=['answer_chunk'])
-    df_chunks.to_csv(kb_chunks_path, index=False)
-    print(f"Knowledge base chunks saved to '{kb_chunks_path}'")
-
     # Save training data
     with open(train_data_path, 'w', encoding='utf-8') as f:
         json.dump(train_data, f, ensure_ascii=False, indent=4)
@@ -123,7 +124,6 @@ def prepare_training_data(
     print(f"Test dataset saved to '{test_data_path}'")
     
     print(f"\n--- Summary ---")
-    print(f"Knowledge base chunks: {len(unique_chunks)}")
     print(f"Training examples: {len(train_data)}")
     print(f"Validation examples: {len(val_data)}")
     print(f"Test examples: {len(test_data)}")
@@ -291,6 +291,9 @@ def clean_results_dir(results_dir):
 if __name__ == "__main__":
     from config import *
 
+    # --- Setup Logging ---
+    original_stdout, log_file, log_file_path = setup_logging(REPORTS_DIR)
+
     # Clean the /results directory before starting
     clean_results_dir(RESULTS_DIR)
 
@@ -319,7 +322,10 @@ if __name__ == "__main__":
         train_data_path=TRAIN_DATA_PATH,
         val_data_path=VAL_DATA_PATH,
         test_data_path=TEST_DATA_PATH,
-        kb_chunks_path=KB_CHUNKS_PATH
+        chunk_size=CHUNK_SIZE,
+        overlap_sentences=OVERLAP_SENTENCES,
+        faiss_index_path=FAISS_INDEX_PATH,
+        metadata_path=METADATA_PATH
     )
 
     print("="*100, "\nTRAINING MODEL\n" + "="*100)
@@ -336,9 +342,18 @@ if __name__ == "__main__":
 
     print("="*100, "\nEVALUATING MODEL\n" + "="*100)
     evaluate_model(
-        report_dir=REPORTS_DIR,
         run_name=RUN,
+        run_description=RUN_DESCRIPTION,
         model_path=MODEL_PATH,
         embedding_model_name=EMBEDDING_MODEL_NAME,
+        faiss_index_path=FAISS_INDEX_PATH,
+        metadata_path=METADATA_PATH,
+        train_data_path=TRAIN_DATA_PATH,
+        val_data_path=VAL_DATA_PATH,
+        test_data_path=TEST_DATA_PATH,
+        report_dir=REPORTS_DIR,
         max_examples=10
     )
+
+    # --- Restore stdout and close log file ---
+    close_logging(original_stdout, log_file, log_file_path)

@@ -1,7 +1,8 @@
 import os
 
 ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
-RUN = "run_1"
+RUN = "run_4"
+RUN_DESCRIPTION = "Revising SQuAD training data generation"
 USE_SUBSET = False
 SUBSET_SIZE = 1000
 EPOCHS = 3
@@ -13,8 +14,7 @@ if not os.path.exists(os.path.join(ROOT_DIR, 'models', RUN)):
     os.makedirs(os.path.join(ROOT_DIR, 'models', RUN))
 
 DATA_SOURCE = "https://drive.google.com/file/d/1vXyLOFRc98f097x4CrK9gOOb3JsKvPmN/view?usp=sharing"
-DATASET_PATH = os.path.join(ROOT_DIR, 'data', RUN, 'intern_screening_dataset.csv')
-KB_CHUNKS_PATH = os.path.join(ROOT_DIR, 'data', RUN, 'knowledge_base_chunks.csv')
+DATASET_PATH = os.path.join(ROOT_DIR, 'data', 'intern_screening_dataset.csv')
 
 TRAIN_DATA_PATH = os.path.join(ROOT_DIR, 'data', RUN, 'squad_train_data.json')
 VAL_DATA_PATH = os.path.join(ROOT_DIR, 'data', RUN, 'squad_val_data.json')
@@ -28,5 +28,8 @@ METADATA_PATH = os.path.join(ROOT_DIR, "models", RUN, "chunks_metadata.pkl")
 MODEL_PATH = os.path.join(ROOT_DIR, "models", RUN, "final_model")
 TRAINING_SUMMARY_PATH = os.path.join(ROOT_DIR, "models", RUN, "training_summary.json")
 
+# Training parameters
+CHUNK_SIZE = 400
+OVERLAP_SENTENCES = 1
 EMBEDDING_MODEL_NAME = 'sentence-transformers/all-MiniLM-L6-v2'
 MODEL_CHECKPOINT = 'distilbert-base-cased-distilled-squad'
