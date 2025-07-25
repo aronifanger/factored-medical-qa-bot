@@ -1,10 +1,10 @@
 import os
 
 ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
-RUN = "run_2"
+RUN = "run_1"
 USE_SUBSET = False
 SUBSET_SIZE = 1000
-EPOCHS = 5
+EPOCHS = 3
 
 # Check if the run directory exists
 if not os.path.exists(os.path.join(ROOT_DIR, 'data', RUN)):
@@ -22,6 +22,8 @@ TEST_DATA_PATH = os.path.join(ROOT_DIR, 'data', RUN, 'squad_test_data.json')
 
 FAISS_INDEX_PATH = os.path.join(ROOT_DIR, "models", RUN, "faiss_index.bin")
 FAISS_PATH = os.path.join(ROOT_DIR, "models", RUN, "faiss_index.bin")
+REPORTS_DIR = os.path.join(ROOT_DIR, "reports", RUN)
+RESULTS_DIR = os.path.join(ROOT_DIR, "results", RUN)
 METADATA_PATH = os.path.join(ROOT_DIR, "models", RUN, "chunks_metadata.pkl")
 MODEL_PATH = os.path.join(ROOT_DIR, "models", RUN, "final_model")
 TRAINING_SUMMARY_PATH = os.path.join(ROOT_DIR, "models", RUN, "training_summary.json")
