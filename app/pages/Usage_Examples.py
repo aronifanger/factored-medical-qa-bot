@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+import os
 
 st.set_page_config(page_title="Usage Examples", page_icon="🧪", layout="centered")
 
@@ -11,11 +12,11 @@ Click any of the buttons to send the question to the API and see the response.
 """)
 
 # --- API Address ---
-API_URL = "http://127.0.0.1:8000/ask"
+API_URL = os.getenv("API_URL", "http://127.0.0.1:8001/ask")
 
 # --- Example Questions ---
 example_questions = [
-    "What is the main cause of heartburn?",
+    "What is Glaucoma?",
     "What are the symptoms of a stroke?",
     "How can I prevent high blood pressure?",
 ]
@@ -32,7 +33,10 @@ def ask_question(question):
             st.success(data['answer'])
 
             with st.expander("View Context Used"):
-                st.info(data['context'])
+                for i, context in enumerate(data['context']):
+                    st.markdown(f"### Context {i+1}")
+                    st.write(context.replace("---", "\n\n").replace("#", ""))
+                    st.write("-"*100 + "\n")
             
             st.write(f"**Confidence Score:** {data['score']:.4f}")
             st.markdown("---")
