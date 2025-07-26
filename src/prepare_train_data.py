@@ -1,8 +1,20 @@
 import pandas as pd
 import random
+import re
 
 from tqdm import tqdm   
 from transformers import AutoTokenizer
+
+
+def find_answer_start(context, answer):
+    """
+    Finds the starting index of an answer within a context.
+    Returns -1 if the answer is not found.
+    """
+    match = next(re.finditer(re.escape(answer), context), None)
+    if match is None:
+        return -1
+    return match.start()
 
 
 def create_squad_dataset_pipeline(
@@ -18,35 +30,45 @@ def create_squad_dataset_pipeline(
     embedding_model_name: str
 ) -> tuple[list[dict], list[dict], list[dict]]:
     """
-    Creates SQuAD-like datasets (train, validation, test) from a DataFrame.
-    For each sample, the context is the answer itself.
+    Creates SQuAD-like datasets with context that includes distractor answers
+    to make the model more robust.
     """
     
     squad_data = []
+    all_answers = df['answer'].dropna().unique().tolist()
     
-    print("Generating SQuAD-style data with context as the answer...")
-    for _, row in tqdm(df.iterrows(), total=df.shape[0]):
+    print("Generating SQuAD-style data with distractor contexts...")
+    for index, row in tqdm(df.iterrows(), total=df.shape[0]):
         if pd.isna(row['answer']):
             continue
         
         question = row['question']
-        answer_text = row['answer'].strip()
+        correct_answer = row['answer'].strip()
         
-        # The context is the answer itself.
-        context = answer_text
-        answer_start = 0
+        # Select two random distractor answers
+        distractors = random.sample(
+            [ans for ans in all_answers if ans != correct_answer], 2
+        )
+        
+        # Create a context with the correct answer and distractors
+        context_pieces = [correct_answer] + distractors
+        random.shuffle(context_pieces)
+        context = "\n\n---\n\n".join(context_pieces)
+        
+        answer_start = find_answer_start(context, correct_answer)
 
-        qa_pair = {
-            'id': str(abs(hash(context + question + answer_text))),
-            'title': "Medical Information",
-            'context': context,
-            'question': question,
-            'answers': {
-                'text': [answer_text],
-                'answer_start': [answer_start]
+        if answer_start != -1:
+            qa_pair = {
+                'id': str(abs(hash(context + question + correct_answer))),
+                'title': "Medical Information",
+                'context': context,
+                'question': question,
+                'answers': {
+                    'text': [correct_answer],
+                    'answer_start': [answer_start]
+                }
             }
-        }
-        squad_data.append(qa_pair)
+            squad_data.append(qa_pair)
 
     # Shuffle the dataset before splitting
     random.shuffle(squad_data)
