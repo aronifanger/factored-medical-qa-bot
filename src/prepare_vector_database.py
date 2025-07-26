@@ -21,51 +21,45 @@ except Exception:
     nltk.download('punkt_tab')
 
 
-def chunk_text(text: str, tokenizer, chunk_size: int = 400, chunk_overlap: int = 50) -> list[str]:
+def chunk_text_by_sentence(
+        text: str,
+        tokenizer,
+        chunk_size: int = 400,
+        overlap_sentences: int = 1
+    ) -> list[str]:
     """
-    Divide a long text into smaller chunks, respecting the sentence boundaries
-    and with a defined overlap in number of tokens.
-
-    Args:
-        text (str): The complete text to be divided.
-        tokenizer: The tokenizer from the Transformers library to be used to count the tokens.
-        chunk_size (int): The maximum size of each chunk in tokens.
-        chunk_overlap (int): The number of tokens of overlap between consecutive chunks.
-
-    Returns:
-        list[str]: A list of strings, where each string is a chunk of text.
+    Splits a text into chunks, with overlap based on whole sentences.
+    This is a more robust approach to ensure text integrity.
     """
-    if not text:
+    if not isinstance(text, str) or not text:
         return []
 
-    # 1. Dividir o texto em sentenças usando NLTK
+    # 1. Split the text into sentences
     sentences = nltk.sent_tokenize(text)
-
-    # 2. Tokenizar todas as sentenças e guardar seus tokens
-    tokens = [tokenizer.encode(sentence, add_special_tokens=False) for sentence in sentences]
     
+    # 2. Group sentences into chunks
     chunks = []
-    current_chunk_tokens = []
-    
-    for i, sentence_tokens in enumerate(tokens):
-        # Se adicionar a próxima sentença ultrapassar o tamanho do chunk
-        if len(current_chunk_tokens) + len(sentence_tokens) > chunk_size:
-            # Finaliza o chunk atual e adiciona à lista
-            if current_chunk_tokens:
-                chunk_str = tokenizer.decode(current_chunk_tokens)
-                chunks.append(chunk_str.strip())
-            
-            # 3. Começa um novo chunk com sobreposição
-            # Pega os últimos tokens do chunk que acabamos de criar para formar a sobreposição
-            overlap_tokens = current_chunk_tokens[-chunk_overlap:] if chunk_overlap > 0 and current_chunk_tokens else []
-            current_chunk_tokens = overlap_tokens + sentence_tokens
-        else:
-            current_chunk_tokens.extend(sentence_tokens)
+    current_chunk_sentences = []
+    current_chunk_tokens = 0
 
-    # Adiciona o último chunk que sobrou
-    if current_chunk_tokens:
-        chunk_str = tokenizer.decode(current_chunk_tokens)
-        chunks.append(chunk_str.strip())
+    for sentence in sentences:
+        sentence_tokens = tokenizer.tokenize(sentence)
+        
+        # If adding the next sentence exceeds the limit
+        if current_chunk_tokens + len(sentence_tokens) > chunk_size and current_chunk_sentences:
+            # Finalize the current chunk
+            chunks.append(" ".join(current_chunk_sentences))
+            
+            # Start a new chunk with sentence overlap
+            current_chunk_sentences = current_chunk_sentences[-overlap_sentences:]
+            current_chunk_tokens = len(tokenizer.tokenize(" ".join(current_chunk_sentences)))
+        
+        current_chunk_sentences.append(sentence)
+        current_chunk_tokens += len(sentence_tokens)
+
+    # Add the last chunk
+    if current_chunk_sentences:
+        chunks.append(" ".join(current_chunk_sentences))
         
     return chunks
 
@@ -99,7 +93,7 @@ def generate_chunks(df: pd.DataFrame, tokenizer: AutoTokenizer) -> pd.DataFrame:
 
     # Use the chunk_text function to split the 'answer' column into 'answer_chunk'
     df_answer_grouped['answer_chunk'] = df_answer_grouped['answer'].apply(
-        lambda x: chunk_text(x, tokenizer)
+        lambda x: chunk_text_by_sentence(x, tokenizer)
     )
 
     return df_answer_grouped.explode('answer_chunk')

@@ -29,6 +29,3 @@ where = ["src"]
 
 [tool.uv.pip]
 extra-index-url = ["https://download.pytorch.org/whl/cu118"]
-
-[project.scripts]
-start-frontend = "streamlit run app.py"

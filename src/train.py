@@ -69,8 +69,6 @@ class CompactLoggingCallback(TrainerCallback):
             f.write(footer)
 
 
-
-
 def prepare_train_features(examples, tokenizer):
     """
     Tokenizes the texts and maps answers (in character positions)
@@ -100,6 +98,9 @@ def prepare_train_features(examples, tokenizer):
     tokenized_examples["start_positions"] = []
     tokenized_examples["end_positions"] = []
 
+    # This counter is for debugging, to print only the first few examples.
+    debug_counter = 0
+
     for i, offsets in enumerate(offset_mapping):
         input_ids = tokenized_examples["input_ids"][i]
         cls_index = input_ids.index(tokenizer.cls_token_id)
@@ -108,16 +109,15 @@ def prepare_train_features(examples, tokenizer):
         sample_index = sample_mapping[i]
         answers = examples["answers"][sample_index]
         
-        # If no answers are present (e.g., negative examples), set CLS as the answer
+        # If no answers are present (negative examples), set CLS as the answer.
         if len(answers["answer_start"]) == 0:
             tokenized_examples["start_positions"].append(cls_index)
             tokenized_examples["end_positions"].append(cls_index)
         else:
-            # Get the start and end of the answer in CHARACTER positions
-            start_char = answers["answer_start"][0]
-            end_char = start_char + len(answers["text"][0])
-
-            # Find the start and end of the CONTEXT in TOKEN positions
+            # Since the context is the answer, the start and end of the context span
+            # are the start and end of the answer for this feature.
+            
+            # Find the start and end of the CONTEXT in TOKEN positions.
             token_start_index = 0
             while tokenized_examples.sequence_ids(i)[token_start_index] != 1:
                 token_start_index += 1
@@ -126,18 +126,27 @@ def prepare_train_features(examples, tokenizer):
             while tokenized_examples.sequence_ids(i)[token_end_index] != 1:
                 token_end_index -= 1
 
-            # Check if the answer is completely outside the context span
-            if not (offsets[token_start_index][0] <= start_char and offsets[token_end_index][1] >= end_char):
-                tokenized_examples["start_positions"].append(cls_index)
-                tokenized_examples["end_positions"].append(cls_index)
-            else:
-                # Otherwise, find the start and end token indices of the answer
-                while token_start_index < len(offsets) and offsets[token_start_index][0] <= start_char:
-                    token_start_index += 1
-                tokenized_examples["start_positions"].append(token_start_index - 1)
+            tokenized_examples["start_positions"].append(token_start_index)
+            tokenized_examples["end_positions"].append(token_end_index)
+
+            # --- DEBUG PRINTS ---
+            if debug_counter < 3:
+                print("-" * 30)
+                print(f"DEBUG: Processing feature {i}")
+                print(f"Original Question: {examples['question'][sample_index]}")
                 
-                while offsets[token_end_index][1] >= end_char:
-                    token_end_index -= 1
-                tokenized_examples["end_positions"].append(token_end_index + 1)
+                start_pos = tokenized_examples["start_positions"][-1]
+                end_pos = tokenized_examples["end_positions"][-1]
+                
+                print(f"Computed Positions: START={start_pos}, END={end_pos}")
+
+                # Ensure positions are valid before decoding
+                if start_pos <= end_pos:
+                    decoded_answer_span = tokenizer.decode(input_ids[start_pos:end_pos+1])
+                    print(f"Decoded Answer Span: '{decoded_answer_span}'")
+                else:
+                    print("Invalid positions: start > end")
+
+                debug_counter += 1
 
     return tokenized_examples

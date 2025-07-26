@@ -1,8 +1,8 @@
 import os
 
 ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
-RUN = "run_4"
-RUN_DESCRIPTION = "Revising SQuAD training data generation"
+RUN = "run_5"
+RUN_DESCRIPTION = "Simple strategy: the answer is the same as the context"
 USE_SUBSET = False
 SUBSET_SIZE = 1000
 EPOCHS = 3

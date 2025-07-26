@@ -77,7 +77,12 @@ def evaluate_dataset(
             context = example['context']
         
         try:
-            result = qa_pipeline(question=question, context=context)
+            result = qa_pipeline(question=question, context=context, max_answer_len=512)
+            
+            # --- DEBUG PRINT ---
+            if 'train' in dataset.builder_name and len(examples) < 3:
+                print(f"DEBUG: Pipeline result for question '{question}': {result}")
+
             predicted_answer = result['answer']
             confidence = result['score']
         except Exception:
