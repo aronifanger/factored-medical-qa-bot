@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+import os
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -19,7 +20,7 @@ Welcome to the Medical QA Bot! This bot is trained to answer questions about med
 """)
 
 # --- API Address ---
-API_URL = "http://127.0.0.1:8000/ask"
+API_URL = os.getenv("API_URL", "http://127.0.0.1:8000/ask")
 
 # --- User Interaction ---
 question = st.text_input("What is your medical question?", "")

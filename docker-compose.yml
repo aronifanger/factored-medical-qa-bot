@@ -1,0 +1,26 @@
+services:
+  backend:
+    build: .
+    ports:
+      - "8001:8001"
+    command: uvicorn src.api:app --host 0.0.0.0 --port 8001
+    volumes:
+      - ./src:/app/src
+      - ./models:/app/models
+      - ./data:/app/data
+
+  frontend:
+    build: .
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://backend:8001/ask
+    command: streamlit run app/App.py
+    depends_on:
+      - backend
+    volumes:
+      - ./app:/app/app
+
+volumes:
+  models:
+  data: 
