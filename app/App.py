@@ -39,7 +39,10 @@ if st.button("Ask"):
                 st.success(data['answer'])
 
                 with st.expander("View Context Used"):
-                    st.info(data['context'])
+                    for i, context in enumerate(data['context']):
+                        st.markdown(f"### Context {i+1}")
+                        st.write(context.replace("---", "\n\n").replace("#", ""))
+                        st.write("-"*100 + "\n")
                 
                 st.write(f"**Confidence Score:** {data['score']:.4f}")
 
@@ -52,4 +55,4 @@ if st.button("Ask"):
 
 # --- Footer ---
 st.markdown("---")
-st.markdown("Developed as part of the coding challenge.") 
+st.markdown("Medical Assistant Bot Assignment - coding challenge.") 

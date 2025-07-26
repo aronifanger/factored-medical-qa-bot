@@ -1,21 +1,19 @@
 from download_data import get_drive_file_id, download_file_from_google_drive
+from logger import setup_logging, close_logging
 from prepare_train_data import create_squad_dataset_pipeline
 from prepare_vector_database import generate_chunks, create_and_save_faiss_index
 from transformers import AutoTokenizer, AutoModelForQuestionAnswering
 from transformers import TrainingArguments, Trainer
 from train import prepare_train_features, CompactLoggingCallback
 from evaluate import evaluate_model
+from evaluate_retriever import evaluate_retriever
 from datasets import load_dataset
 
 import json
 import os
 import pandas as pd
-import re
 import torch
 from datetime import datetime
-import sys
-
-from logger import setup_logging, close_logging
 
 
 def download_data(data_source, dataset_path):
@@ -353,6 +351,17 @@ if __name__ == "__main__":
         test_data_path=TEST_DATA_PATH,
         report_dir=REPORTS_DIR,
         max_examples=10
+    )
+
+    evaluate_retriever(
+        run_name=RUN,
+        embedding_model_name=EMBEDDING_MODEL_NAME,
+        faiss_index_path=FAISS_INDEX_PATH,
+        metadata_path=METADATA_PATH,
+        test_data_path=TEST_DATA_PATH,
+        report_dir=REPORTS_DIR,
+        max_examples=MAX_EXAMPLES_RETRIEVER,
+        k=K_RETRIEVER
     )
 
     # --- Restore stdout and close log file ---

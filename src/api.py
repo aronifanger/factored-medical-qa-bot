@@ -1,18 +1,12 @@
-import os
-import pickle
 import faiss
+import pickle
 import torch
+
+from config import FAISS_INDEX_PATH, METADATA_PATH, MODEL_PATH, EMBEDDING_MODEL_NAME
 from fastapi import FastAPI
 from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 from transformers import AutoTokenizer, AutoModelForQuestionAnswering, pipeline
-
-# --- Configuration ---
-ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
-FAISS_INDEX_PATH = os.path.join(ROOT_DIR, "models/faiss_index.bin")
-METADATA_PATH = os.path.join(ROOT_DIR, "models/chunks_metadata.pkl")
-MODEL_PATH = os.path.join(ROOT_DIR, "models/final_model")
-EMBEDDING_MODEL_NAME = 'all-MiniLM-L6-v2'
 
 # --- FastAPI App Initialization ---
 app = FastAPI(
@@ -29,7 +23,7 @@ class Query(BaseModel):
 class Answer(BaseModel):
     question: str
     answer: str
-    context: str
+    context: list[str]
     score: float
 
 # --- Global Variables ---
@@ -47,7 +41,10 @@ def load_models():
 
     # 1. Load FAISS index and metadata for context retrieval
     try:
+        print(f"Loading FAISS index from: {FAISS_INDEX_PATH}")
         index = faiss.read_index(FAISS_INDEX_PATH)
+        
+        print(f"Loading metadata from: {METADATA_PATH}")
         with open(METADATA_PATH, "rb") as f:
             metadata = pickle.load(f)
         
@@ -56,9 +53,9 @@ def load_models():
         retriever = {
             "index": index,
             "metadata": metadata,
-            "model": embedding_model
+            "embedding": embedding_model
         }
-        print(f"✅ FAISS index and metadata loaded successfully. Index contains {index.ntotal} vectors.")
+        print(f"FAISS index and metadata loaded successfully. Index contains {index.ntotal} vectors.")
 
     except FileNotFoundError:
         raise RuntimeError(f"Could not find FAISS index or metadata at the specified paths. Please run `prepare_vector_database.py` first.")
@@ -67,6 +64,7 @@ def load_models():
 
     # 2. Load the fine-tuned Question Answering model and tokenizer
     try:
+        print(f"Loading QA model from: {MODEL_PATH}")
         device = 0 if torch.cuda.is_available() else -1
         model = AutoModelForQuestionAnswering.from_pretrained(MODEL_PATH)
         tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
@@ -77,14 +75,13 @@ def load_models():
             tokenizer=tokenizer,
             device=device
         )
-        print(f"✅ QA pipeline loaded successfully on device: {'cuda' if device == 0 else 'cpu'}")
+        print(f"QA pipeline loaded successfully on device: {'cuda' if device == 0 else 'cpu'}")
 
     except Exception as e:
         raise RuntimeError(f"Error loading the QA model from '{MODEL_PATH}': {e}")
     
     print("--- Models loaded and API is ready! ---")
-
-
+    
 # --- API Endpoints ---
 @app.get("/", summary="Health Check", description="Check if the API is running.")
 def health_check():
@@ -100,24 +97,21 @@ def ask_question(query: Query):
         raise RuntimeError("Models are not loaded. Please check the startup process.")
 
     # 1. Find relevant context using FAISS
-    question_embedding = retriever["model"].encode([query.question], convert_to_numpy=True)
-    distances, indices = retriever["index"].search(question_embedding, k=query.top_k)
-
-    # Concatenate the retrieved chunks to form a single context
-    context = " ".join([retriever["metadata"][i]['answer_chunk'] for i in indices[0]])
+    question_embedding = retriever["embedding"].encode([query.question], convert_to_numpy=True)
+    _, indices = retriever["index"].search(question_embedding, k=query.top_k)
+    context_list = [retriever["metadata"][i]['answer_chunk'] for i in indices[0]]
+    context = " ".join(context_list)
 
     # 2. Use the QA pipeline to get the answer
-    result = qa_pipeline(question=query.question, context=context)
+    result = qa_pipeline(question=query.question, context=context, max_answer_len=512)
 
     return Answer(
         question=query.question,
         answer=result["answer"],
-        context=context,
+        context=context_list,
         score=result["score"]
     )
 
 if __name__ == "__main__":
     import uvicorn
-    # To run this file directly: `python src/api.py`
-    # The API will be available at http://127.0.0.1:8000
     uvicorn.run("api:app", host="127.0.0.1", port=8000, reload=True) 

@@ -31,5 +31,7 @@ TRAINING_SUMMARY_PATH = os.path.join(ROOT_DIR, "models", RUN, "training_summary.
 # Training parameters
 CHUNK_SIZE = 400
 OVERLAP_SENTENCES = 1
+K_RETRIEVER = 3
+MAX_EXAMPLES_RETRIEVER = 500
 EMBEDDING_MODEL_NAME = 'sentence-transformers/all-MiniLM-L6-v2'
 MODEL_CHECKPOINT = 'distilbert-base-cased-distilled-squad'

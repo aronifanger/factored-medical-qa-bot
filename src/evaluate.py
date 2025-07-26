@@ -71,7 +71,7 @@ def evaluate_dataset(
         
         if use_retrieval:
             question_embedding = embedding_model.encode([question], convert_to_numpy=True)
-            distances, indices = index.search(question_embedding, k=3)
+            _, indices = index.search(question_embedding, k=3)
             context = " ".join([metadata[j]['answer_chunk'] for j in indices[0]])
         else:
             context = example['context']

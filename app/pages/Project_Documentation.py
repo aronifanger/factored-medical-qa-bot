@@ -1,41 +1,74 @@
 import streamlit as st
+import pandas as pd
 
 st.set_page_config(page_title="Project Documentation", page_icon="📄", layout="wide")
 
 st.title("📄 Project Documentation")
 
 st.markdown("""
-This section documents the approach used to develop the Medical QA Bot, as requested in the challenge.
+This page documents the technical approach, performance, and architecture of the Medical QA Bot.
 """)
 
-st.header("1. Assumptions Made")
+st.header("1. Solution Overview")
 st.markdown("""
-- **API Availability:** The Streamlit interface assumes that the FastAPI API (`src/api.py`) is running and accessible at `http://127.0.0.1:8000`.
-- **Context Quality:** The quality of the bot's response depends directly on the relevance of the text chunks retrieved by `FAISS`. It is assumed that the found contexts are sufficient to formulate a correct answer.
-- **Execution Environment:** The project was developed and tested in a Python 3.10+ environment with the dependencies listed in `pyproject.toml`.
-- **Model Generalization:** The model was trained on a specific dataset. Its ability to answer questions outside this medical domain is limited.
+To address the challenge, we implemented an **Extractive Question Answering (EQA)** system. This approach combines a dense retrieval system with a reader model to find and extract answers from a knowledge base.
+
+The pipeline works in two main stages:
+1.  **Retriever**: A vector database built with **FAISS** is used to retrieve the most relevant text chunks from the knowledge base in response to a user's question. We use the `all-MiniLM-L6-v2` model from `sentence-transformers` to generate the text embeddings.
+2.  **Reader**: A **BERT-based** model (`distilbert-base-cased-distilled-squad`), fine-tuned on the provided dataset, scans the retrieved chunks to identify and extract the precise span of text that answers the question.
+
+#### Rationale
+This architecture was chosen because:
+- The challenge explicitly required training a custom model, making off-the-shelf LLM APIs unsuitable.
+- The use of LLMs was explicitly forbidden.
+- The Retriever-Reader model was a state-of-the-art approach for open-domain QA before the widespread adoption of large-scale generative models, making it a robust and appropriate choice.
 """)
 
-st.header("2. Model Performance")
+st.header("2. Performance Evaluation")
 st.markdown("""
-A formal performance evaluation is detailed in the execution reports, but we can highlight some qualitative points:
-
-**Strengths:**
-- **Fast Retrieval:** Using `FAISS` for nearest neighbor search allows for extremely fast context retrieval, even with a large vector database.
-- **Direct Answers:** The Question Answering (QA) model is effective at extracting the exact answer from a context text, resulting in concise answers.
-- **Scalability:** The architecture with an API decoupled from the frontend allows both to be scaled independently.
-
-**Weaknesses:**
-- **Context Dependency:** If the retrieved context does not contain the answer, the model cannot answer or may provide an incorrect answer based on partial information.
-- **Sensitivity to Question Phrasing:** Questions phrased very differently from the original text can lead to inadequate context retrieval.
-- **Does Not Generate New Information:** The model does not "reason" or create new sentences; it only extracts excerpts from the provided context.
+The system's performance was evaluated in two parts: the retriever's ability to find the correct documents and the reader's ability to extract the correct answer.
 """)
 
-st.header("3. Potential Improvements")
+st.subheader("Retriever Performance (Recall@3)")
 st.markdown("""
-- **Dataset Augmentation:** Use more medical data, possibly from reliable sources like PubMed, to enrich the vector knowledge base and refine the QA model.
-- **Hybrid Retrieval:** Combine vector similarity search (dense) with traditional keyword search (sparse, like TF-IDF or BM25) to improve the relevance of retrieved documents.
-- **Generative Model (RAG):** Replace the extractive QA model with a generative language model (like GPT or T5) in a Retrieval-Augmented Generation (RAG) flow. This would allow for more fluid and natural answers, rather than just extracting snippets.
-- **User Feedback:** Implement a system where the user can rate the quality of the answer (👍/👎). This feedback could be used to continuously refine the retrieval or QA model.
-- **Response Streaming:** For generative models, answers could be streamed word by word to improve the user's perception of speed.
+The retriever was evaluated on its ability to find the document containing the correct answer within its top 3 retrieved results.
+""")
+retriever_data = {
+    'Metric': ['Recall@3', 'Total Questions', 'Hits (Correct Doc Found)', 'Misses (Correct Doc Not Found)'],
+    'Score': ['72.60%', '500', '363', '137']
+}
+st.table(pd.DataFrame(retriever_data).set_index('Metric'))
+
+
+st.subheader("Question-Answering Performance (F1-Score)")
+st.markdown("""
+The end-to-end model was evaluated using Exact Match (EM) and F1-Score, which measures the overlap between the predicted and ground-truth answers.
+""")
+qa_data = {
+    "Method": ["Direct QA (BERT only)", "Retrieval + QA (Full Pipeline)"],
+    "Dataset": ["Test", "Test"],
+    "Exact Match": ["60.00%", "0.00%"],
+    "F1 Score": ["81.75%", "32.72%"]
+}
+st.table(pd.DataFrame(qa_data))
+st.markdown("""
+**Analysis:**
+- The fine-tuned BERT model performs well when given the correct context directly (**81.75% F1**).
+- The performance drops significantly when combined with the retriever (**32.72% F1**). This suggests that while the retriever finds the correct document often, the context formed by combining multiple chunks may be too noisy for the reader.
+""")
+
+
+st.header("3. Limitations")
+st.markdown("""
+1.  **Dataset Formatting**: The provided dataset was not structured for Extractive Question Answering, as it lacks distinct `context` and `answer` fields where the answer is a direct span of the context. This introduced a bias where the model often extracts the entire text chunk instead of a more concise answer.
+2.  **Time Constraints**: The project timeline was limited, which restricted the opportunity for extensive iteration, experimentation, and refinement of the models and code.
+""")
+
+st.header("4. Potential Improvements")
+st.markdown("""
+-   **Model Performance**: The most significant improvement would come from correctly formatting the training data. By creating explicit `(question, context, answer_span)` triplets, the model could be trained to extract more precise answers.
+-   **Retriever Performance**: More time could be dedicated to experimenting with different embedding models and chunking strategies to improve the `Recall@k` score.
+-   **Test-Driven Development (TDD)**: Given the time constraints, TDD was not adopted. For a long-term project, incorporating tests from the beginning would improve code quality and reliability.
+-   **Cross-Platform Compatibility**: The project was developed on Windows. For broader compatibility and easier deployment, the environment should be containerized using Docker with a Linux base.
+-   **Code Review and Refinement**: A thorough code review would help enforce consistent coding standards, improve function-level documentation, and refactor modules for better clarity.
 """) 
