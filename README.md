@@ -26,6 +26,25 @@ This architecture was chosen for a few key reasons:
 - The use of LLMs was explicitly forbidden in the challenge description.
 - The Retriever-Reader model was a state-of-the-art approach for open-domain QA before the widespread adoption of large-scale generative models, making it a robust and appropriate choice for this task.
 
+
+### Screenshots
+
+Below are example screenshots demonstrating the Medical Assistant Bot in action. All screenshots are located in the `screenshots/` directory.
+
+#### 1. Example Question and Answer
+
+![Question and Answer](screenshots/screenshot-1.png)
+
+#### 2. Project Documentation
+
+![Example 1](screenshots/screenshot-2.jpeg)
+
+#### 3. Usage Examples
+
+![Example 2](screenshots/screenshot-3.jpeg)
+![Example 3](screenshots/screenshot-4.jpeg)
+
+
 ## Performance Evaluation
 
 The system's performance was evaluated in two parts: the retriever's ability to find the correct documents and the reader's ability to extract the correct answer from them.
