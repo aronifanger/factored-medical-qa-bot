@@ -117,7 +117,7 @@ The end-to-end model was evaluated using Exact Match (EM) and F1-Score, which me
 
 1. **Clone the repository:**
    ```bash
-   git clone <repository-url>
+   git clone git@github.com:aronifanger/factored-medical-qa-bot.git
    cd factored-medical-qa-bot
    ```
 
